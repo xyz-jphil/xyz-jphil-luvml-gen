@@ -21,9 +21,10 @@ public class CodeGenerator {
         var targetDir = resolveTargetDirectory();
         System.out.println("Generating code to: " + targetDir.toAbsolutePath());
         
-        // Generate only DSL factory methods
+        // Generate DSL factory methods for elements and attributes
         new HtmlElementsGenerator().generateTo(targetDir);
-        
+        new HtmlAttributesGenerator().generateTo(targetDir);
+
         System.out.println("Code generation completed successfully!");
     }
     
