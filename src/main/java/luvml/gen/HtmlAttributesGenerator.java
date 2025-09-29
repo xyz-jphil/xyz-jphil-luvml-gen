@@ -35,7 +35,7 @@ import static luvml.AttributeType.*;
  *    - Maintains readability while preserving all metadata
  * 
  * 4. **JavaPoet Code Generation Strategy**:
- *    - formatSetLiteral() helper creates concise Set.of(ENUM1, ENUM2) syntax
+ *    - All metadata is centralized in HtmlAttributeData (no duplication)
  *    - Static imports reduce token count and visual noise
  *    - Generated code matches hand-written code quality standards
  * 
@@ -93,118 +93,52 @@ public class HtmlAttributesGenerator {
                 .addModifiers(Modifier.PRIVATE)
                 .addStatement("// Utility class")
                 .build())
-            
-            // Static maps for metadata (efficient, no duplication)
-            .addField(FieldSpec.builder(
-                ParameterizedTypeName.get(ClassName.get(Map.class), 
-                    ClassName.get(String.class), 
-                    ParameterizedTypeName.get(Set.class, String.class)), 
-                "ENUM_VALUES")
-                .addModifiers(Modifier.PRIVATE, Modifier.STATIC, Modifier.FINAL)
-                .initializer(generateEnumValuesMap())
-                .build())
-            
-            .addField(FieldSpec.builder(
-                ParameterizedTypeName.get(ClassName.get(Map.class), 
-                    ClassName.get(String.class), 
-                    ParameterizedTypeName.get(Set.class, AttributeCategory.class)), 
-                "ATTRIBUTE_CATEGORIES")
-                .addModifiers(Modifier.PRIVATE, Modifier.STATIC, Modifier.FINAL)
-                .initializer(generateAttributeCategoriesMap())
-                .build())
-            
-            .addField(FieldSpec.builder(
-                ParameterizedTypeName.get(ClassName.get(Map.class), 
-                    ClassName.get(String.class), 
-                    ClassName.get(AttributeType.class)), 
-                "ATTRIBUTE_TYPES")
-                .addModifiers(Modifier.PRIVATE, Modifier.STATIC, Modifier.FINAL)
-                .initializer(generateAttributeTypesMap())
-                .build())
-            
-            .addField(FieldSpec.builder(
-                ParameterizedTypeName.get(ClassName.get(Map.class), 
-                    ClassName.get(String.class), 
-                    ClassName.get(AttributeScope.class)), 
-                "ATTRIBUTE_SCOPES")
-                .addModifiers(Modifier.PRIVATE, Modifier.STATIC, Modifier.FINAL)
-                .initializer(generateAttributeScopesMap())
-                .build())
-            
+
             // Utility method for string attributes (lightweight)
             .addMethod(MethodSpec.methodBuilder("stringAttribute")
                 .addModifiers(Modifier.STATIC)
-                .returns(ClassName.get("luvml", "HtmlAttribute"))
+                .returns(HtmlAttribute.class)
                 .addParameter(String.class, "name")
                 .addParameter(String.class, "value")
-                .addStatement("return new $T(name, value)", ClassName.get("luvml", "HtmlAttribute"))
+                .addStatement("return new $T(name, value)", HtmlAttribute.class)
                 .build())
-            
+
             // Utility method for scoped string attributes (for conflicting names)
             .addMethod(MethodSpec.methodBuilder("scopedStringAttribute")
                 .addModifiers(Modifier.STATIC)
-                .returns(ClassName.get("luvml", "ScopedHtmlAttribute"))
+                .returns(ScopedHtmlAttribute.class)
                 .addParameter(String.class, "name")
                 .addParameter(String.class, "value")
                 .addParameter(AttributeScope.class, "scope")
-                .addStatement("return new $T(name, value, scope)", ClassName.get("luvml", "ScopedHtmlAttribute"))
+                .addStatement("return new $T(name, value, scope)", ScopedHtmlAttribute.class)
                 .build())
-            
+
             // Utility method for boolean attributes (lightweight)
             .addMethod(MethodSpec.methodBuilder("booleanAttribute")
                 .addModifiers(Modifier.STATIC)
-                .returns(ClassName.get("luvml", "BooleanAttribute"))
+                .returns(BooleanAttribute.class)
                 .addParameter(String.class, "name")
                 .addParameter(boolean.class, "present")
-                .addStatement("return new $T(name, present)", ClassName.get("luvml", "BooleanAttribute"))
+                .addStatement("return new $T(name, present)", BooleanAttribute.class)
                 .build())
-            
+
             // Utility method for enum attributes (lightweight)
             .addMethod(MethodSpec.methodBuilder("enumAttribute")
                 .addModifiers(Modifier.STATIC)
-                .returns(ClassName.get("luvml", "EnumAttribute"))
+                .returns(EnumAttribute.class)
                 .addParameter(String.class, "name")
                 .addParameter(String.class, "value")
-                .addStatement("return new $T(name, value)", ClassName.get("luvml", "EnumAttribute"))
+                .addStatement("return new $T(name, value)", EnumAttribute.class)
                 .build())
-            
+
             // Utility method for scoped enum attributes (for conflicting names)
             .addMethod(MethodSpec.methodBuilder("scopedEnumAttribute")
                 .addModifiers(Modifier.STATIC)
-                .returns(ClassName.get("luvml", "ScopedEnumAttribute"))
+                .returns(ScopedEnumAttribute.class)
                 .addParameter(String.class, "name")
                 .addParameter(String.class, "value")
                 .addParameter(AttributeScope.class, "scope")
-                .addStatement("return new $T(name, value, scope)", ClassName.get("luvml", "ScopedEnumAttribute"))
-                .build())
-            
-            // Public getter methods for static metadata maps
-            .addMethod(MethodSpec.methodBuilder("getAttributeCategories")
-                .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-                .returns(ParameterizedTypeName.get(Set.class, AttributeCategory.class))
-                .addParameter(String.class, "attributeName")
-                .addStatement("return ATTRIBUTE_CATEGORIES.get(attributeName)")
-                .build())
-            
-            .addMethod(MethodSpec.methodBuilder("getAttributeType")
-                .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-                .returns(AttributeType.class)
-                .addParameter(String.class, "attributeName")
-                .addStatement("return ATTRIBUTE_TYPES.get(attributeName)")
-                .build())
-            
-            .addMethod(MethodSpec.methodBuilder("getAttributeScope")
-                .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-                .returns(AttributeScope.class)
-                .addParameter(String.class, "attributeName")
-                .addStatement("return ATTRIBUTE_SCOPES.get(attributeName)")
-                .build())
-            
-            .addMethod(MethodSpec.methodBuilder("getEnumValues")
-                .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-                .returns(ParameterizedTypeName.get(Set.class, String.class))
-                .addParameter(String.class, "compositeKey")
-                .addStatement("return ENUM_VALUES.get(compositeKey)")
+                .addStatement("return new $T(name, value, scope)", ScopedEnumAttribute.class)
                 .build());
         
         // Track generated method signatures to prevent duplicates
@@ -214,18 +148,16 @@ public class HtmlAttributesGenerator {
         generatedConvenienceMethods.clear();
         
         // Generate static factory methods for all attributes
-        for (var attribute : HtmlAttributeData.ALL_ATTRIBUTES) {
+        for (var attribute : HtmlAttributeData.ALL_ATTRIBUTES.values()) {
             var attrName = attribute.attribute();
             var type = attribute.type();
-            var categories = formatSetLiteral(attribute.categories(), "AttributeCategory");
             var scope = attribute.scope().toString();  // Clean enum name due to static import
-            var attrType = attribute.type().toString(); // Clean enum name due to static import
-            
+
             // Skip data-* template and event handlers for now (they need special handling)
             if (attrName.contains("*") || attrName.startsWith("on")) {
                 continue;
             }
-            
+
             // Handle reserved keywords with multiple method names
             String[] methodNames;
             if (RESERVED_KEYWORDS.containsKey(attrName)) {
@@ -233,7 +165,7 @@ public class HtmlAttributesGenerator {
             } else {
                 methodNames = new String[]{toMethodName(attrName)};
             }
-            
+
             // Generate methods for each method name (primary and secondary)
             for (var methodName : methodNames) {
                 if (type == BOOLEAN) {
@@ -243,27 +175,27 @@ public class HtmlAttributesGenerator {
                         generatedMethods.add(signature1);
                         classBuilder.addMethod(MethodSpec.methodBuilder(methodName)
                             .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-                            .returns(ClassName.get("luvml", "BooleanAttribute"))
+                            .returns(BooleanAttribute.class)
                             .addStatement("return booleanAttribute($S, true)", attrName)
                             .build());
                     }
-                    
+
                     // Boolean attribute - with parameter
                     var signature2 = methodName + "(boolean)";
                     if (!generatedMethods.contains(signature2)) {
                         generatedMethods.add(signature2);
                         classBuilder.addMethod(MethodSpec.methodBuilder(methodName)
                             .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-                            .returns(ClassName.get("luvml", "BooleanAttribute"))
+                            .returns(BooleanAttribute.class)
                             .addParameter(boolean.class, "value")
                             .addStatement("return booleanAttribute($S, value)", attrName)
                             .build());
                     }
-                            
+
                 } else if (type == ENUM) {
                     // For enum attributes, generate factory methods for each enum value
-                    generateEnumFactoryMethods(classBuilder, attrName, attribute.enumValues(), 
-                        categories, scope, attribute.scope());
+                    generateEnumFactoryMethods(classBuilder, attrName, attribute.enumValues(),
+                        attribute.scope());
                     
                     // Generate generic method for custom values
                     // For conflicting attributes (type, size), use scoped method names and ScopedHtmlAttribute
@@ -277,7 +209,7 @@ public class HtmlAttributesGenerator {
                             generatedMethods.add(signature);
                             classBuilder.addMethod(MethodSpec.methodBuilder(scopedMethodName)
                                 .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-                                .returns(ClassName.get("luvml", "ScopedEnumAttribute"))
+                                .returns(ScopedEnumAttribute.class)
                                 .addParameter(String.class, "value")
                                 .addStatement("return scopedEnumAttribute($S, value, $L)", attrName, scope)
                                 .build());
@@ -288,7 +220,7 @@ public class HtmlAttributesGenerator {
                             generatedMethods.add(signature);
                             classBuilder.addMethod(MethodSpec.methodBuilder(methodName)
                                 .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-                                .returns(ClassName.get("luvml", "EnumAttribute"))
+                                .returns(EnumAttribute.class)
                                 .addParameter(String.class, "value")
                                 .addStatement("return enumAttribute($S, value)", attrName)
                                 .build());
@@ -302,7 +234,7 @@ public class HtmlAttributesGenerator {
                         generatedMethods.add(signature);
                         classBuilder.addMethod(MethodSpec.methodBuilder(methodName)
                             .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-                            .returns(ClassName.get("luvml", "HtmlAttribute"))
+                            .returns(HtmlAttribute.class)
                             .addParameter(String.class, "value")
                             .addStatement("return stringAttribute($S, value)", attrName)
                             .build());
@@ -326,23 +258,23 @@ public class HtmlAttributesGenerator {
      * Generate factory methods for each enum value of an enum attribute.
      * Example: for target attribute with values [_blank, _self], generates target_blank(), target_self()
      */
-    private void generateEnumFactoryMethods(TypeSpec.Builder classBuilder, String attrName, 
-                                          Set<String> enumValues, String categories, String scope, AttributeScope attributeScope) {
+    private void generateEnumFactoryMethods(TypeSpec.Builder classBuilder, String attrName,
+                                          Set<String> enumValues, AttributeScope attributeScope) {
         // Generate specific factory methods for each enum value
         for (var enumValue : enumValues) {
             var methodName = toValidJavaMethodName(attrName + "_" + enumValue);
             classBuilder.addMethod(MethodSpec.methodBuilder(methodName)
                 .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-                .returns(ClassName.get("luvml", "EnumAttribute"))
+                .returns(EnumAttribute.class)
                 .addStatement("return enumAttribute($S, $S)", attrName, enumValue)
                 .build());
         }
-        
+
         // Generate convenience method ONLY for non-conflicting attributes
         // For conflicting attributes (type, size), use type(String) + type_enumValue() pattern
         var baseMethodName = toValidJavaMethodName(attrName);
         var conflictingAttributes = Set.of("type", "size");
-        
+
         if (!conflictingAttributes.contains(baseMethodName)) {
             var defaultValue = getDefaultEnumValue(attrName, enumValues);
             var convenienceSignature = baseMethodName + "()";
@@ -350,7 +282,7 @@ public class HtmlAttributesGenerator {
                 generatedConvenienceMethods.add(convenienceSignature);
                 classBuilder.addMethod(MethodSpec.methodBuilder(baseMethodName)
                     .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-                    .returns(ClassName.get("luvml", "EnumAttribute"))
+                    .returns(EnumAttribute.class)
                     .addStatement("return enumAttribute($S, $S)", attrName, defaultValue)
                     .build());
             }
@@ -412,26 +344,26 @@ public class HtmlAttributesGenerator {
         // data method for data-* attributes
         classBuilder.addMethod(MethodSpec.methodBuilder("data")
             .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-            .returns(ClassName.get("luvml", "HtmlAttribute"))
+            .returns(HtmlAttribute.class)
             .addParameter(String.class, "name")
             .addParameter(String.class, "value")
             .addStatement("return stringAttribute(\"data-\" + name, value)")
             .build());
-        
+
         // event method for event handlers
         classBuilder.addMethod(MethodSpec.methodBuilder("event")
             .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-            .returns(ClassName.get("luvml", "HtmlAttribute"))
+            .returns(HtmlAttribute.class)
             .addParameter(String.class, "eventName")
             .addParameter(String.class, "handler")
             .addStatement("return stringAttribute(\"on\" + eventName, handler)")
             .build());
-        
-        
+
+
         // event method for event handlers
         classBuilder.addMethod(MethodSpec.methodBuilder("xmlns")
             .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-            .returns(ClassName.get("luvml", "HtmlAttribute"))
+            .returns(HtmlAttribute.class)
             .addParameter(String.class, "value")
             .addStatement("return stringAttribute(\"xmlns\", value)")
             .build());
@@ -544,129 +476,5 @@ public class HtmlAttributesGenerator {
             "transient", "try", "void", "volatile", "while", "true", "false", "var"
         );
         return keywords.contains(word.toLowerCase());
-    }
-    
-    /**
-     * Generate static map initialization for enum values (efficient, no duplication).
-     * Uses composite keys like "type:FORM", "type:LINK" to handle same attribute names in different contexts.
-     */
-    private CodeBlock generateEnumValuesMap() {
-        var mapBuilder = CodeBlock.builder();
-        mapBuilder.add("new $T<String, $T<String>>() {{\n", HashMap.class, Set.class);
-        
-        var enumAttributes = HtmlAttributeData.ALL_ATTRIBUTES.stream()
-            .filter(attr -> attr.type() == ENUM)
-            .toList();
-            
-        for (var attr : enumAttributes) {
-            var enumValues = formatSetLiteral(attr.enumValues(), "String");
-            var compositeKey = attr.attribute() + ":" + attr.scope();
-            mapBuilder.add("        put($S, $L);\n", compositeKey, enumValues);
-        }
-        
-        mapBuilder.add("    }}");
-        return mapBuilder.build();
-    }
-
-    /**
-     * Generate static map for attribute categories (efficient metadata storage).
-     * Stores both simple names and composite keys for conflicting attributes.
-     */
-    private CodeBlock generateAttributeCategoriesMap() {
-        var mapBuilder = CodeBlock.builder();
-        mapBuilder.add("new $T<String, $T<$T>>() {{\n", HashMap.class, Set.class, AttributeCategory.class);
-        
-        for (var attr : HtmlAttributeData.ALL_ATTRIBUTES) {
-            if (!attr.attribute().contains("*") && !attr.attribute().startsWith("on")) {
-                var categories = formatSetLiteral(attr.categories(), "AttributeCategory");
-                var attrName = attr.attribute();
-                
-                // Store simple name for non-conflicting attributes
-                mapBuilder.add("        put($S, $L);\n", attrName, categories);
-                
-                // Also store composite key for scope-specific lookup
-                var compositeKey = attrName + ":" + attr.scope();
-                mapBuilder.add("        put($S, $L);\n", compositeKey, categories);
-            }
-        }
-        
-        mapBuilder.add("    }}");
-        return mapBuilder.build();
-    }
-
-    /**
-     * Generate static map for attribute types (efficient metadata storage).
-     * Stores both simple names and composite keys for conflicting attributes.
-     */
-    private CodeBlock generateAttributeTypesMap() {
-        var mapBuilder = CodeBlock.builder();
-        mapBuilder.add("new $T<String, $T>() {{\n", HashMap.class, AttributeType.class);
-        
-        for (var attr : HtmlAttributeData.ALL_ATTRIBUTES) {
-            if (!attr.attribute().contains("*") && !attr.attribute().startsWith("on")) {
-                var attrName = attr.attribute();
-                
-                // Store simple name for non-conflicting attributes
-                mapBuilder.add("        put($S, $L);\n", attrName, attr.type().toString());
-                
-                // Also store composite key for scope-specific lookup
-                var compositeKey = attrName + ":" + attr.scope();
-                mapBuilder.add("        put($S, $L);\n", compositeKey, attr.type().toString());
-            }
-        }
-        
-        mapBuilder.add("    }}");
-        return mapBuilder.build();
-    }
-
-    /**
-     * Generate static map for attribute scopes (efficient metadata storage).
-     * Stores both simple names and composite keys for conflicting attributes.
-     */
-    private CodeBlock generateAttributeScopesMap() {
-        var mapBuilder = CodeBlock.builder();
-        mapBuilder.add("new $T<String, $T>() {{\n", HashMap.class, AttributeScope.class);
-        
-        for (var attr : HtmlAttributeData.ALL_ATTRIBUTES) {
-            if (!attr.attribute().contains("*") && !attr.attribute().startsWith("on")) {
-                var attrName = attr.attribute();
-                
-                // Store simple name for non-conflicting attributes
-                mapBuilder.add("        put($S, $L);\n", attrName, attr.scope().toString());
-                
-                // Also store composite key for scope-specific lookup
-                var compositeKey = attrName + ":" + attr.scope();
-                mapBuilder.add("        put($S, $L);\n", compositeKey, attr.scope().toString());
-            }
-        }
-        
-        mapBuilder.add("    }}");
-        return mapBuilder.build();
-    }
-
-    /**
-     * Formats a set of enums as a Set.of() literal for code generation.
-     * Uses clean enum names without class prefixes due to static imports.
-     * Example: Set.of(GLOBAL, FORM) instead of Set.of(AttributeCategory.GLOBAL, AttributeCategory.FORM)
-     */
-    private String formatSetLiteral(Set<?> enumSet, String enumClassName) {
-        if (enumSet.isEmpty()) {
-            return "Set.of()";
-        }
-        
-        var enumValues = enumSet.stream()
-            .map(e -> {
-                var value = e.toString();
-                // Quote string literals
-                if ("String".equals(enumClassName)) {
-                    return "\"" + value + "\"";
-                } else {
-                    // Use clean enum names without class prefixes since we're using static imports
-                    return value;
-                }
-            })
-            .toArray(String[]::new);
-            
-        return "Set.of(" + String.join(", ", enumValues) + ")";
     }
 }
