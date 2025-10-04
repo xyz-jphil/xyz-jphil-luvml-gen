@@ -158,6 +158,75 @@ public class HtmlElementsGenerator {
             .addStatement("return inlineVoidElement($S)", elementName)
             .build());
     }
+
+    private void generateRawTextElementMethods(TypeSpec.Builder classBuilder, String elementName) {
+        // RAW_TEXT elements (script, style) are always block-level in markup
+
+        // Attr_I varargs overload (for attributes like src="...")
+        classBuilder.addMethod(MethodSpec.methodBuilder(elementName)
+            .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+            .returns(BlockRawTextElement.class)
+            .addParameter(ArrayTypeName.of(ParameterizedTypeName.get(
+                ClassName.get(Attr_I.class), WildcardTypeName.subtypeOf(Object.class))), "attrs")
+            .varargs()
+            .addStatement("return new $T($S).addAttributes(attrs)",
+                BlockRawTextElement.class, elementName)
+            .build());
+
+        // CharSequence varargs overload (text-only content)
+        classBuilder.addMethod(MethodSpec.methodBuilder(elementName)
+            .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+            .returns(BlockRawTextElement.class)
+            .addParameter(ArrayTypeName.of(CharSequence.class), "textContent")
+            .varargs()
+            .addStatement("return new $T($S).addContent(textContent)",
+                BlockRawTextElement.class, elementName)
+            .build());
+
+        // No parameters
+        classBuilder.addMethod(MethodSpec.methodBuilder(elementName)
+            .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+            .returns(BlockRawTextElement.class)
+            .addStatement("return new $T($S)",
+                BlockRawTextElement.class, elementName)
+            .build());
+    }
+
+    private void generateEscapableRawTextElementMethods(TypeSpec.Builder classBuilder, String elementName) {
+        // ESCAPABLE_RAW_TEXT: title=block, textarea=inline (based on markup formatting conventions)
+        Class<?> concreteClass = "textarea".equals(elementName)
+            ? InlineEscapableRawTextElement.class
+            : BlockEscapableRawTextElement.class;
+
+        // Attr_I varargs overload (for attributes)
+        classBuilder.addMethod(MethodSpec.methodBuilder(elementName)
+            .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+            .returns(concreteClass)
+            .addParameter(ArrayTypeName.of(ParameterizedTypeName.get(
+                ClassName.get(Attr_I.class), WildcardTypeName.subtypeOf(Object.class))), "attrs")
+            .varargs()
+            .addStatement("return new $T($S).addAttributes(attrs)",
+                concreteClass, elementName)
+            .build());
+
+        // CharSequence varargs overload (text-only content with escaping)
+        classBuilder.addMethod(MethodSpec.methodBuilder(elementName)
+            .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+            .returns(concreteClass)
+            .addParameter(ArrayTypeName.of(CharSequence.class), "textContent")
+            .varargs()
+            .addStatement("return new $T($S).addContent(textContent)",
+                concreteClass, elementName)
+            .build());
+
+        // No parameters
+        classBuilder.addMethod(MethodSpec.methodBuilder(elementName)
+            .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+            .returns(concreteClass)
+            .addStatement("return new $T($S)",
+                concreteClass, elementName)
+            .build());
+    }
     
     /**
      * Generates E class with 114 static factory methods and static metadata maps.
@@ -300,8 +369,23 @@ public class HtmlElementsGenerator {
                 .addParameter(String.class, "tagName")
                 .addStatement("return new $T(tagName)", InlineVoidElement.class)
                 .build())
-                    
-                
+
+            // Text helper methods - delegate to T.java
+            .addMethod(MethodSpec.methodBuilder("text")
+                .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+                .returns(InlineText.class)
+                .addParameter(String.class, "content")
+                .addStatement("return $T.text(content)", T.class)
+                .build())
+
+            .addMethod(MethodSpec.methodBuilder("t")
+                .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+                .returns(InlineText.class)
+                .addParameter(String.class, "content")
+                .addStatement("return $T.t(content)", T.class)
+                .build())
+
+
                 ;
         
         // Generate markup rendering behavior aware static factory methods for all elements
@@ -310,12 +394,18 @@ public class HtmlElementsGenerator {
             var elementType = element.elementType();
 
             switch (elementType) {
-                case CONTAINER, RAW_TEXT, ESCAPABLE_RAW_TEXT -> {
+                case CONTAINER -> {
                     if (element.isPhrasingElement()) {
                         generateInlineContainerMethods(classBuilder, elementName, fragInterface);
                     } else {
                         generateBlockContainerMethods(classBuilder, elementName, fragInterface);
                     }
+                }
+                case RAW_TEXT -> {
+                    generateRawTextElementMethods(classBuilder, elementName);
+                }
+                case ESCAPABLE_RAW_TEXT -> {
+                    generateEscapableRawTextElementMethods(classBuilder, elementName);
                 }
                 case VOID -> {
                     if (element.isBlockVoidElement()) {

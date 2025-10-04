@@ -341,6 +341,40 @@ public class HtmlAttributesGenerator {
      * Add special convenience methods for common attribute patterns.
      */
     private void addSpecialMethods(TypeSpec.Builder classBuilder) {
+        // Delegation to C.java for class attribute (CharSequence support for CSS DSL)
+        classBuilder.addMethod(MethodSpec.methodBuilder("class_")
+            .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+            .returns(HtmlAttribute.class)
+            .addParameter(ArrayTypeName.of(CharSequence.class), "classNames")
+            .varargs()
+            .addStatement("return $T.class_(classNames)", ClassName.get("luvml", "C"))
+            .build());
+
+        classBuilder.addMethod(MethodSpec.methodBuilder("classAttr")
+            .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+            .returns(HtmlAttribute.class)
+            .addParameter(ArrayTypeName.of(CharSequence.class), "classNames")
+            .varargs()
+            .addStatement("return $T.classAttr(classNames)", ClassName.get("luvml", "C"))
+            .build());
+
+        // Delegation to C.java for style attribute (CharSequence support for CSS DSL)
+        classBuilder.addMethod(MethodSpec.methodBuilder("style")
+            .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+            .returns(HtmlAttribute.class)
+            .addParameter(ArrayTypeName.of(CharSequence.class), "cssDeclarations")
+            .varargs()
+            .addStatement("return $T.styleAttr(cssDeclarations)", ClassName.get("luvml", "C"))
+            .build());
+
+        classBuilder.addMethod(MethodSpec.methodBuilder("styleAttr")
+            .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+            .returns(HtmlAttribute.class)
+            .addParameter(ArrayTypeName.of(CharSequence.class), "cssDeclarations")
+            .varargs()
+            .addStatement("return $T.styleAttr(cssDeclarations)", ClassName.get("luvml", "C"))
+            .build());
+
         // data method for data-* attributes
         classBuilder.addMethod(MethodSpec.methodBuilder("data")
             .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
@@ -360,7 +394,7 @@ public class HtmlAttributesGenerator {
             .build());
 
 
-        // event method for event handlers
+        // xmlns attribute
         classBuilder.addMethod(MethodSpec.methodBuilder("xmlns")
             .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
             .returns(HtmlAttribute.class)
