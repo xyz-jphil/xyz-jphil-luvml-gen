@@ -72,7 +72,7 @@ public class HtmlAttributesGenerator {
     public static void main(String[] args) throws IOException {
         System.out.println("Generating HTML attributes DSL...");
         var generator = new HtmlAttributesGenerator();
-        var targetDir = Paths.get("../xyz-jphil-luvml/src/main/java/luvml");
+        var targetDir = Paths.get("../luvml/src/main/java/luvml");
         generator.generateTo(targetDir);
         System.out.println("Generated A.java successfully!");
     }
@@ -147,8 +147,8 @@ public class HtmlAttributesGenerator {
         // Clear convenience methods tracker for this generation run
         generatedConvenienceMethods.clear();
         
-        // Generate static factory methods for all attributes
-        for (var attribute : HtmlAttributeData.ALL_ATTRIBUTES.values()) {
+        // Generate static factory methods for all attributes (using list to include duplicates)
+        for (var attribute : HtmlAttributeData.ALL_ATTRIBUTES_LIST) {
             var attrName = attribute.attribute();
             var type = attribute.type();
             var scope = attribute.scope().toString();  // Clean enum name due to static import
